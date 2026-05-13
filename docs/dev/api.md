@@ -8,56 +8,71 @@ Base URL: `/api`
 |--------|----------|-------------|
 | GET/POST | `/api/auth/[...nextauth]` | NextAuth handler (login, callback, session) |
 
+All endpoints except auth require a valid session cookie. Unauthorized requests return `401 { error: "Unauthorized" }`.
+
 ## Workspaces
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/workspaces` | Create a workspace |
+| POST | `/api/workspaces` | Create a workspace (max 10 per user) |
 | GET | `/api/workspaces` | List user's workspaces |
-| GET | `/api/workspaces/:id` | Get workspace details |
+| GET | `/api/workspaces/:id` | Get workspace details (members, statuses, task count) |
 
 ## Workspace Memberships
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/workspaces/:id/members` | List members + pending invitations |
-| POST | `/api/workspaces/:id/members` | Invite member (by email) |
-| DELETE | `/api/workspaces/:id/members/:uid` | Remove member |
-| POST | `/api/workspaces/:id/leave` | Member leaves workspace |
-
-## Invitations
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/invitations/:token/accept` | Accept invitation |
-| DELETE | `/api/workspaces/:id/invitations/:iid` | Cancel invitation |
+| POST | `/api/workspaces/:id/members` | Invite member by email (owner only) |
+| DELETE | `/api/workspaces/:id/members?userId=...` | Remove member (owner only) |
+| POST | `/api/workspaces/:id/leave` | Member leaves workspace (owner cannot leave) |
 
 ## Statuses
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/workspaces/:id/statuses` | Add status |
-| PUT | `/api/workspaces/:id/statuses/:sid` | Rename status |
-| DELETE | `/api/workspaces/:id/statuses/:sid` | Delete status (with migration target) |
-| PUT | `/api/workspaces/:id/statuses/reorder` | Reorder statuses |
+| GET | `/api/workspaces/:id/statuses` | List workspace statuses (ordered by position) |
+| POST | `/api/workspaces/:id/statuses` | Add status (owner only, max 20) |
+| PUT | `/api/workspaces/:id/statuses` | Reorder statuses (body: `{ statusIds: string[] }`) |
+| PATCH | `/api/workspaces/:id/statuses/:sid` | Rename status (owner only) |
+| DELETE | `/api/workspaces/:id/statuses/:sid` | Delete status with task migration (owner only) |
 
 ## Tasks
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/workspaces/:id/tasks` | Create task |
-| GET | `/api/workspaces/:id/tasks` | List tasks (paginated, filterable) |
-| GET | `/api/workspaces/:id/tasks/:tid` | Get task detail |
-| PUT | `/api/workspaces/:id/tasks/:tid` | Update task |
-| DELETE | `/api/workspaces/:id/tasks/:tid` | Delete task |
+| GET | `/api/workspaces/:id/tasks` | List tasks (paginated, sortable, filterable by status) |
+| GET | `/api/workspaces/:id/tasks/:taskId` | Get task detail (includes comments) |
+| PATCH | `/api/workspaces/:id/tasks/:taskId` | Update task (partial) |
+| DELETE | `/api/workspaces/:id/tasks/:taskId` | Delete task (cascade deletes comments) |
+
+### Query Parameters (GET /tasks)
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `statusId` | string | — | Filter by status |
+| `page` | integer | 1 | Page number |
+| `sortBy` | string | createdAt | Sort field |
+| `sortOrder` | string | desc | asc or desc |
 
 ## Comments
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/workspaces/:id/tasks/:tid/comments` | Add comment |
-| GET | `/api/workspaces/:id/tasks/:tid/comments` | List comments (paginated) |
-| DELETE | `/api/workspaces/:id/tasks/:tid/comments/:cid` | Delete comment |
+| POST | `/api/workspaces/:id/tasks/:taskId/comments` | Add comment |
+| GET | `/api/workspaces/:id/tasks/:taskId/comments` | List comments (paginated, 25 per page) |
+| DELETE | `/api/workspaces/:id/tasks/:taskId/comments/:commentId` | Delete comment (author only) |
+
+## Error Format
+
+All errors return:
+
+```json
+{ "error": "<message>" }
+```
+
+Some endpoints add `details` (Zod validation) or `taskCount` alongside `error`.
 
 ## OpenAPI Schema
 

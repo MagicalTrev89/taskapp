@@ -1,0 +1,898 @@
+openapi: 3.1.0
+info:
+  title: TaskApp API
+  description: REST API for TaskApp — a collaborative task management application
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: Local development
+
+security:
+  - sessionAuth: []
+
+paths:
+  /workspaces:
+    get:
+      summary: List user's workspaces
+      tags: [Workspaces]
+      responses:
+        "200":
+          description: List of workspaces the user belongs to
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkspaceSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      summary: Create a workspace
+      tags: [Workspaces]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+      responses:
+        "201":
+          description: Created workspace with default statuses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "400":
+          description: Invalid input or workspace limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /workspaces/{id}:
+    get:
+      summary: Get workspace detail
+      tags: [Workspaces]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+      responses:
+        "200":
+          description: Workspace with members, statuses, and task count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /workspaces/{id}/statuses:
+    get:
+      summary: List workspace statuses
+      tags: [Statuses]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+      responses:
+        "200":
+          description: List of statuses ordered by position
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Status"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      summary: Add a status
+      tags: [Statuses]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+      responses:
+        "201":
+          description: Created status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+        "400":
+          description: Invalid input or max statuses reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Only owners can manage statuses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Status name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      summary: Reorder statuses
+      tags: [Statuses]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statusIds]
+              properties:
+                statusIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Statuses in new order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Status"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: Only owners can manage statuses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /workspaces/{id}/statuses/{sid}:
+    patch:
+      summary: Rename a status
+      tags: [Statuses]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+        - name: sid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Status ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+      responses:
+        "200":
+          description: Updated status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: Only owners can manage statuses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Status name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/componentschemas/Error"
+
+    delete:
+      summary: Delete a status
+      tags: [Statuses]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+        - name: sid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Status ID
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetStatusId:
+                  type: string
+                  description: Required if the status has tasks; tasks will be moved here
+      responses:
+        "200":
+          description: Status deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "400":
+          description: Must have at least one status, or must specify targetStatusId
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Only owners can manage statuses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /workspaces/{id}/tasks:
+    get:
+      summary: List workspace tasks
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+        - name: statusId
+          in: query
+          schema:
+            type: string
+          description: Filter by status ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            default: createdAt
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        "200":
+          description: Paginated task list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  totalPages:
+                    type: integer
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      summary: Create a task
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 5000
+                statusId:
+                  type: string
+                  description: Defaults to first status if omitted
+      responses:
+        "201":
+          description: Created task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid input or workspace has no statuses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /workspaces/{id}/tasks/{taskId}:
+    get:
+      summary: Get task detail
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task with status, creator, and comments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    patch:
+      summary: Update a task
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 5000
+                statusId:
+                  type: string
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      summary: Delete a task (cascade deletes comments)
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /workspaces/{id}/tasks/{taskId}/comments:
+    get:
+      summary: List task comments
+      tags: [Comments]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        "200":
+          description: Paginated comment list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Comment"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  totalPages:
+                    type: integer
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      summary: Add a comment
+      tags: [Comments]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 5000
+      responses:
+        "201":
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /workspaces/{id}/tasks/{taskId}/comments/{commentId}:
+    delete:
+      summary: Delete a comment (author only)
+      tags: [Comments]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Comment deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "403":
+          description: Only the comment author can delete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /workspaces/{id}/members:
+    get:
+      summary: List workspace members and invitations
+      tags: [Members]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+      responses:
+        "200":
+          description: Members and pending invitations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Member"
+                  invitations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Invitation"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      summary: Invite a member by email
+      tags: [Members]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+        "400":
+          description: Invalid email or max members reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Only owners can manage members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already a member or already invited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Remove a member
+      tags: [Members]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: ID of the member to remove
+      responses:
+        "200":
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "400":
+          description: userId required or cannot remove owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Only owners can manage members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /workspaces/{id}/leave:
+    post:
+      summary: Leave a workspace
+      tags: [Members]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+      responses:
+        "200":
+          description: Left workspace successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "400":
+          description: Owner cannot leave
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+components:
+  parameters:
+    workspaceId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Workspace ID
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+
+    WorkspaceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [OWNER, MEMBER]
+        memberCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+        statuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Status"
+        _count:
+          type: object
+          properties:
+            tasks:
+              type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    Member:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        workspaceId:
+          type: string
+        role:
+          type: string
+          enum: [OWNER, MEMBER]
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+            avatarUrl:
+              type: string
+              nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Status:
+      type: object
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        name:
+          type: string
+        position:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        statusId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        createdById:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/Status"
+        createdBy:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            avatarUrl:
+              type: string
+              nullable: true
+        _count:
+          type: object
+          properties:
+            comments:
+              type: integer
+
+    TaskDetail:
+      allOf:
+        - $ref: "#/components/schemas/Task"
+        - type: object
+          properties:
+            comments:
+              type: array
+              items:
+                $ref: "#/components/schemas/Comment"
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+        taskId:
+          type: string
+        authorId:
+          type: string
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        author:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            avatarUrl:
+              type: string
+              nullable: true
+
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        email:
+          type: string
+        token:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, ACCEPTED, EXPIRED]
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        invitedById:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Unauthorized:
+      description: Not authenticated
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Forbidden:
+      description: Not authorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token

@@ -1,9 +1,9 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { KanbanBoardClient } from "./kanban-board-client";
+import { SettingsClient } from "./settings-client";
 
-export default async function BoardPage({
+export default async function SettingsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -15,10 +15,23 @@ export default async function BoardPage({
 
   const membership = await prisma.membership.findUnique({
     where: { userId_workspaceId: { userId: session.user.id, workspaceId: id } },
-    include: { workspace: true },
   });
 
   if (!membership) redirect("/");
 
-  return <KanbanBoardClient workspaceId={id} workspaceName={membership.workspace.name} />;
+  const isOwner = membership.role === "OWNER";
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id },
+    select: { name: true },
+  });
+
+  return (
+    <SettingsClient
+      workspaceId={id}
+      workspaceName={workspace?.name ?? "Workspace"}
+      userId={session.user.id}
+      isOwner={isOwner}
+    />
+  );
 }

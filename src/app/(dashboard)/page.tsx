@@ -68,7 +68,7 @@ export default async function DashboardPage() {
     );
   }
 
-  // Redirect to first workspace's board
+  // Redirect to first workspace, using saved view preference
   const firstWorkspace = memberships[0].workspace;
   redirect(`/workspaces/${firstWorkspace.id}/board`);
 }

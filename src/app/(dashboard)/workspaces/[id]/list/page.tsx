@@ -1,9 +1,9 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { KanbanBoardClient } from "./kanban-board-client";
+import { ListClient } from "./list-client";
 
-export default async function BoardPage({
+export default async function ListPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -20,5 +20,5 @@ export default async function BoardPage({
 
   if (!membership) redirect("/");
 
-  return <KanbanBoardClient workspaceId={id} workspaceName={membership.workspace.name} />;
+  return <ListClient workspaceId={id} workspaceName={membership.workspace.name} />;
 }

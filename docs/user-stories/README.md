@@ -12,7 +12,7 @@ Stories are organised by epic. Each story file lives in its epic subfolder.
 
 | # | Title | Status |
 |---|-------|--------|
-| US-002 | [Create a Workspace](workspaces/US-002-create-workspace.md) | Draft |
+| US-002 | [Create a Workspace](workspaces/US-002-create-workspace.md) | In Progress |
 | US-003 | [Workspace Membership](workspaces/US-003-workspace-membership.md) | Draft |
 | US-004 | [Configure Workspace Statuses](workspaces/US-004-configure-statuses.md) | Draft |
 | US-010 | [Navigation & App Shell](workspaces/US-010-navigation-app-shell.md) | Draft |
