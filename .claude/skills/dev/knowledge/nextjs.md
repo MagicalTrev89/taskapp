@@ -69,7 +69,8 @@ src/app/
 
 - Access the session on the server via `auth()` from `@/auth` — **not** `getServerSession`.
 - In Server Components and Route Handlers: `const session = await auth();`
-- Protect routes via `middleware.ts` at the project root using the `auth` middleware export.
+- Protect routes via `proxy.ts` at the project root using the `auth` middleware export.
+- **Next.js 16 renamed middleware to proxy.** The file must be `src/proxy.ts` (not `middleware.ts`). Proxy runs on Node.js runtime by default, so Prisma works natively without Edge workarounds.
 - The Prisma adapter is wired in — the session user ID maps to the `User` table via the adapter.
 
 ## Common pitfalls
@@ -84,6 +85,7 @@ src/app/
 | Large bundle on a page that only needs server data | Remove `'use client'` — fetch on the server |
 | `window.location.href` causes full reload after mutation | Use `useRouter().push()` from `next/navigation` for client-side navigation |
 | Sidebar state lost on mobile route change | Use `usePathname()` effect to close mobile sidebar on navigation |
+| Next.js 16 middleware errors with `node:path` | Next.js 16 renamed middleware to proxy (`src/proxy.ts`). Old `middleware.ts` file runs in Edge runtime and can't use Prisma. Rename to `proxy.ts` and remove any `runtime` config — proxy defaults to Node.js. |
 
 ## Server/Client component split pattern
 
