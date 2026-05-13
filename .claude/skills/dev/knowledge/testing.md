@@ -77,3 +77,12 @@ Do not mock the database in any test. Prior incident: mocked tests passed but th
 | Playwright seed script crashes on Prisma import | Rewrite seed to use `pg` directly |
 | RSC content not visible after navigation in Playwright | Add `waitForSelector` for specific content |
 | Tests pass locally, fail in CI | Check CI workflow has `npx prisma generate` before test step |
+
+## API route testing patterns
+
+When testing API routes that handle workspace-scoped resources:
+
+1. **Every DELETE/PUT/PATCH must verify workspace membership** — even for sub-resources like comments. A user who has left a workspace should not be able to delete their old comments by knowing the comment ID.
+2. **Whitelist sort fields** — never pass user-supplied `sortBy` directly to Prisma `orderBy`. Map to an allowlist: `["createdAt", "title", "statusId"]`.
+3. **Whitespace-only strings are not empty** — Zod's `.min(1)` accepts `"   "`. Use `.refine(val => val.trim().length > 0)` or `.trim().min(1)` for text fields where whitespace-only input should be rejected.
+4. **Nullable vs optional for clearing fields** — When a PATCH endpoint should allow clearing a field (e.g., removing a description), use `.nullable()` in the Zod schema. `.optional()` alone means "keep existing if omitted" — `{ description: null }` with `.nullable().optional()` means "set to null".

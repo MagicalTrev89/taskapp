@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Toast {
   id: number;
@@ -23,28 +22,4 @@ export function useToast() {
   }, []);
 
   return { toasts, addToast };
-}
-
-export function useApiMutation<TData, TVariables>(
-  mutationFn: (variables: TVariables) => Promise<TData>,
-  options?: {
-    onSuccess?: (data: TData, variables: TVariables) => void;
-    invalidateKeys?: string[][];
-    successMessage?: string;
-    errorMessage?: string;
-  }
-) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn,
-    onSuccess: (data, variables) => {
-      if (options?.invalidateKeys) {
-        options.invalidateKeys.forEach((key) => {
-          queryClient.invalidateQueries({ queryKey: key });
-        });
-      }
-      options?.onSuccess?.(data, variables);
-    },
-  });
 }

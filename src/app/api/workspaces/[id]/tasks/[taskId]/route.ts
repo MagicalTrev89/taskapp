@@ -1,23 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { z } from "zod";
-
-const updateTaskSchema = z.object({
-  title: z.string().min(1).max(255).optional(),
-  description: z.string().max(5000).optional(),
-  statusId: z.string().optional(),
-});
-
-async function requireMember(workspaceId: string, userId: string) {
-  const membership = await prisma.membership.findUnique({
-    where: { userId_workspaceId: { userId, workspaceId } },
-  });
-  if (!membership) {
-    return NextResponse.json({ error: "Not a member of this workspace" }, { status: 403 });
-  }
-  return null;
-}
+import { requireMember } from "@/lib/authz";
+import { updateTaskSchema } from "@/lib/validations/task";
 
 export async function GET(
   _request: NextRequest,
@@ -37,11 +22,6 @@ export async function GET(
     include: {
       status: true,
       createdBy: { select: { id: true, name: true, avatarUrl: true } },
-      comments: {
-        include: { author: { select: { id: true, name: true, avatarUrl: true } } },
-        orderBy: { createdAt: "asc" },
-        take: 25,
-      },
     },
   });
 
@@ -107,8 +87,6 @@ export async function DELETE(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  // Cascade delete comments
-  await prisma.comment.deleteMany({ where: { taskId } });
   await prisma.task.delete({ where: { id: taskId } });
 
   return NextResponse.json({ success: true });

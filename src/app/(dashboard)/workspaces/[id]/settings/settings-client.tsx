@@ -263,7 +263,8 @@ export function SettingsClient({
   const handleDeleteStatus = (statusId: string) => {
     if (statuses.length <= 1) return;
     if (statuses.length === 2) {
-      deleteStatusMutation.mutate({ statusId });
+      const otherStatusId = statuses.find((s) => s.id !== statusId)?.id ?? "";
+      deleteStatusMutation.mutate({ statusId, targetStatusId: otherStatusId });
     } else {
       setMigrateTo(statuses.find((s) => s.id !== statusId)?.id ?? "");
       setDeletingId(statusId);
@@ -658,10 +659,18 @@ function SortableStatusItem({
           >
             Rename
           </button>
-          {statusesLength > 1 && (
+          {statusesLength > 1 ? (
             <button
               onClick={() => handleDeleteStatus(status.id)}
               className="text-xs text-ink/40 hover:text-red-500 px-2 py-1 cursor-pointer"
+            >
+              Delete
+            </button>
+          ) : (
+            <button
+              disabled
+              title="A workspace must have at least one status"
+              className="text-xs text-ink/20 cursor-not-allowed"
             >
               Delete
             </button>

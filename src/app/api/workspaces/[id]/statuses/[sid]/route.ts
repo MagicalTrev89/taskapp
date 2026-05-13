@@ -2,15 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { requireOwner } from "@/lib/authz";
-import { z } from "zod";
-
-const updateStatusSchema = z.object({
-  name: z.string().min(1).max(50),
-});
-
-const deleteStatusSchema = z.object({
-  targetStatusId: z.string().optional(),
-});
+import { updateStatusSchema, deleteStatusSchema } from "@/lib/validations/status";
 
 export async function PATCH(
   request: NextRequest,
@@ -95,28 +87,32 @@ export async function DELETE(
         { status: 400 }
       );
     }
-
-    // Move tasks to target status
-    await prisma.task.updateMany({
-      where: { statusId },
-      data: { statusId: parsed.data.targetStatusId },
-    });
   }
 
-  // Reorder remaining statuses
-  await prisma.status.delete({ where: { id: statusId } });
+  const targetStatusId = parsed.success ? parsed.data.targetStatusId : undefined;
 
-  // Re-assign positions
-  const remaining = await prisma.status.findMany({
-    where: { workspaceId },
-    orderBy: { position: "asc" },
+  // Wrap all operations in a single transaction for consistency
+  await prisma.$transaction(async (tx) => {
+    if (taskCount > 0 && targetStatusId) {
+      await tx.task.updateMany({
+        where: { statusId },
+        data: { statusId: targetStatusId },
+      });
+    }
+
+    await tx.status.delete({ where: { id: statusId } });
+
+    const remaining = await tx.status.findMany({
+      where: { workspaceId },
+      orderBy: { position: "asc" },
+    });
+
+    await Promise.all(
+      remaining.map((s, i) =>
+        tx.status.update({ where: { id: s.id }, data: { position: i } })
+      )
+    );
   });
-
-  await prisma.$transaction(
-    remaining.map((s, i) =>
-      prisma.status.update({ where: { id: s.id }, data: { position: i } })
-    )
-  );
 
   return NextResponse.json({ success: true });
 }

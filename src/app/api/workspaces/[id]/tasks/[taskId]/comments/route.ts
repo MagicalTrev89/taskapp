@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { z } from "zod";
-
-const createCommentSchema = z.object({
-  text: z.string().min(1).max(5000),
-});
+import { createCommentSchema } from "@/lib/validations/comment";
 
 export async function POST(
   request: NextRequest,

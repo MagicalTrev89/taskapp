@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export async function GET(
@@ -6,6 +7,15 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+  const session = await auth();
+
+  // Redirect unauthenticated users to login, preserving the invitation URL
+  if (!session?.user?.id) {
+    const loginUrl = new URL("/", request.url);
+    loginUrl.searchParams.set("callbackUrl", request.url);
+    loginUrl.searchParams.set("error", "invitation-login-required");
+    return NextResponse.redirect(loginUrl);
+  }
 
   const invitation = await prisma.invitation.findUnique({
     where: { token },
@@ -28,19 +38,17 @@ export async function GET(
     return NextResponse.redirect(new URL("/?error=invitation-expired", request.url));
   }
 
-  // Find user by email
-  const user = await prisma.user.findUnique({
-    where: { email: invitation.email },
-  });
-
-  if (!user) {
-    return NextResponse.redirect(new URL("/?error=user-not-found", request.url));
+  // Verify the logged-in user's email matches the invited email
+  if (session.user.email !== invitation.email) {
+    return NextResponse.redirect(
+      new URL(`/?error=invitation-email-mismatch&invited=${encodeURIComponent(invitation.email)}`, request.url)
+    );
   }
 
   // Check if already a member
   const existingMembership = await prisma.membership.findUnique({
     where: {
-      userId_workspaceId: { userId: user.id, workspaceId: invitation.workspaceId },
+      userId_workspaceId: { userId: session.user.id, workspaceId: invitation.workspaceId },
     },
   });
 
@@ -59,7 +67,7 @@ export async function GET(
   await prisma.$transaction([
     prisma.membership.create({
       data: {
-        userId: user.id,
+        userId: session.user.id,
         workspaceId: invitation.workspaceId,
         role: "MEMBER",
       },

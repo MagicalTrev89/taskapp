@@ -48,6 +48,7 @@ export function TaskDetailClient({
   const [editDescription, setEditDescription] = useState("");
   const [editStatusId, setEditStatusId] = useState("");
   const [commentText, setCommentText] = useState("");
+  const [commentPage, setCommentPage] = useState(1);
   const [backHref, setBackHref] = useState(`/workspaces/${workspaceId}/board`);
 
   useEffect(() => {
@@ -81,7 +82,7 @@ export function TaskDetailClient({
     },
   });
 
-  const { data: commentsData } = useQuery<{ comments: Comment[]; total: number }>({
+  const { data: commentsData } = useQuery<{ comments: Comment[]; total: number; page: number; totalPages: number }>({
     queryKey: ["comments", workspaceId, taskId],
     queryFn: async () => {
       const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/comments`);
@@ -90,8 +91,28 @@ export function TaskDetailClient({
     },
   });
 
+  const [allComments, setAllComments] = useState<Comment[]>([]);
+  const [hasMoreComments, setHasMoreComments] = useState(false);
+
+  useEffect(() => {
+    if (commentsData) {
+      setAllComments(commentsData.comments);
+      setHasMoreComments(commentsData.page < commentsData.totalPages);
+    }
+  }, [commentsData]);
+
+  const loadMoreComments = async () => {
+    const nextPage = (commentsData?.page ?? 1) + 1;
+    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/comments?page=${nextPage}`);
+    if (res.ok) {
+      const data = await res.json();
+      setAllComments((prev) => [...prev, ...data.comments]);
+      setHasMoreComments(nextPage < data.totalPages);
+    }
+  };
+
   const updateTaskMutation = useMutation({
-    mutationFn: async (data: { title?: string; description?: string; statusId?: string }) => {
+    mutationFn: async (data: { title?: string; description?: string | null; statusId?: string }) => {
       const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -176,7 +197,7 @@ export function TaskDetailClient({
     if (!editTitle.trim()) return;
     updateTaskMutation.mutate({
       title: editTitle.trim(),
-      description: editDescription.trim() || undefined,
+      description: editDescription.trim() === "" ? null : editDescription.trim(),
       statusId: editStatusId,
     });
   };
@@ -191,7 +212,7 @@ export function TaskDetailClient({
     });
   };
 
-  const comments = commentsData?.comments ?? [];
+  const comments = allComments;
 
   if (isLoading || !task) {
     return (
@@ -369,7 +390,15 @@ export function TaskDetailClient({
                 </div>
               ))}
               {comments.length === 0 && (
-                <p className="text-sm text-ink/30 text-center py-4">No comments yet</p>
+                <p className="text-sm text-ink/30 text-center py-4">No comments yet. Be the first to comment.</p>
+              )}
+              {hasMoreComments && (
+                <button
+                  onClick={loadMoreComments}
+                  className="text-sm text-primary hover:text-primary-dark font-medium cursor-pointer mt-2"
+                >
+                  Load more comments
+                </button>
               )}
             </div>
           </div>

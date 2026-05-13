@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { z } from "zod";
-
-const createTaskSchema = z.object({
-  title: z.string().min(1).max(255),
-  description: z.string().max(5000).optional(),
-  statusId: z.string().optional(),
-});
+import { createTaskSchema } from "@/lib/validations/task";
 
 export async function POST(
   request: NextRequest,
@@ -34,6 +28,12 @@ export async function POST(
   }
 
   const { title, description, statusId } = parsed.data;
+
+  // Check task limit
+  const taskCount = await prisma.task.count({ where: { workspaceId } });
+  if (taskCount >= 10000) {
+    return NextResponse.json({ error: "Maximum of 10,000 tasks per workspace" }, { status: 400 });
+  }
 
   // Determine status
   let finalStatusId = statusId;

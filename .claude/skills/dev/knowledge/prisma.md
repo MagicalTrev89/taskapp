@@ -52,3 +52,5 @@ import { PrismaClient } from '@/generated/prisma/client';
 | Playwright seed/teardown fails with import error | Use `pg` directly, not Prisma client |
 | Type errors on newly added fields after schema change | Restart the dev server after `prisma generate` |
 | New NOT NULL column migration with existing rows | Define and document the default value in the user story first |
+| Case-insensitive unique constraint in Prisma | `@@unique` is case-sensitive at DB level; use `findFirst` with `mode: "insensitive"` in app code for case-insensitive uniqueness checks |
+| Setting a field to NULL via PATCH | Use `.nullable()` in Zod schema (not `.optional()` alone) — Prisma interprets `{ description: null }` as "set to null" but `{}` (omitted) as "keep existing" |

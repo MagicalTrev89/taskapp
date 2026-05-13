@@ -3,21 +3,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { requireOwner } from "@/lib/authz";
 import { z } from "zod";
-
-const createStatusSchema = z.object({
-  name: z.string().min(1).max(50),
-});
-
-const updateStatusSchema = z.object({
-  name: z.string().min(1).max(50),
-});
+import { createStatusSchema } from "@/lib/validations/status";
 
 const reorderStatusesSchema = z.object({
   statusIds: z.array(z.string()),
-});
-
-const deleteStatusSchema = z.object({
-  targetStatusId: z.string().optional(),
 });
 
 export async function GET(

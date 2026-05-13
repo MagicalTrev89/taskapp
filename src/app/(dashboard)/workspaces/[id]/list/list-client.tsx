@@ -57,10 +57,17 @@ export function ListClient({
     },
   });
 
-  const { data: tasksData, isLoading } = useQuery<{ tasks: Task[]; total: number }>({
-    queryKey: ["tasks", workspaceId, statusFilter],
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
+
+  const { data: tasksData, isLoading } = useQuery<{ tasks: Task[]; total: number; page: number; totalPages: number }>({
+    queryKey: ["tasks", workspaceId, statusFilter, sortField, sortOrder, page],
     queryFn: async () => {
-      const params = new URLSearchParams({ limit: "500" });
+      const params = new URLSearchParams({
+        page: String(page),
+        sortBy: sortField === "status" ? "statusId" : sortField,
+        sortOrder,
+      });
       if (statusFilter !== "all") params.set("statusId", statusFilter);
       const res = await fetch(`/api/workspaces/${workspaceId}/tasks?${params}`);
       if (!res.ok) throw new Error("Failed to fetch tasks");
@@ -107,22 +114,8 @@ export function ListClient({
   });
 
   const tasks = tasksData?.tasks ?? [];
-
-  const sortedTasks = [...tasks].sort((a, b) => {
-    let comparison = 0;
-    switch (sortField) {
-      case "title":
-        comparison = a.title.localeCompare(b.title);
-        break;
-      case "status":
-        comparison = a.status.position - b.status.position;
-        break;
-      case "createdAt":
-        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        break;
-    }
-    return sortOrder === "asc" ? comparison : -comparison;
-  });
+  const totalPages = tasksData?.totalPages ?? 1;
+  const total = tasksData?.total ?? 0;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -131,6 +124,7 @@ export function ListClient({
       setSortField(field);
       setSortOrder(field === "createdAt" ? "desc" : "asc");
     }
+    setPage(1);
   };
 
   const formatDate = (date: string) => {
@@ -168,7 +162,7 @@ export function ListClient({
           <div className="flex items-center gap-3">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-ink focus:outline-none focus:border-primary cursor-pointer"
             >
               <option value="all">All statuses</option>
@@ -178,7 +172,7 @@ export function ListClient({
                 </option>
               ))}
             </select>
-            <span className="text-sm text-ink/40">{tasks.length} tasks</span>
+            <span className="text-sm text-ink/40">{total} tasks</span>
           </div>
           <button
             onClick={() => setShowNewTask(true)}
@@ -247,7 +241,7 @@ export function ListClient({
           <div className="flex items-center justify-center py-16">
             <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
           </div>
-        ) : sortedTasks.length === 0 ? (
+        ) : tasks.length === 0 ? (
           <div className="text-center py-16">
             {statusFilter !== "all" ? (
               <>
@@ -301,7 +295,7 @@ export function ListClient({
                 </tr>
               </thead>
               <tbody>
-                {sortedTasks.map((task) => (
+                {tasks.map((task) => (
                   <tr
                     key={task.id}
                     className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors duration-150"
@@ -344,6 +338,29 @@ export function ListClient({
                 ))}
               </tbody>
             </table>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                <span className="text-sm text-ink/40">
+                  Page {page} of {totalPages}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage(Math.max(1, page - 1))}
+                    disabled={page === 1}
+                    className="text-sm text-ink/50 hover:text-ink px-3 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    disabled={page === totalPages}
+                    className="text-sm text-ink/50 hover:text-ink px-3 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

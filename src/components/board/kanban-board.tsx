@@ -136,6 +136,20 @@ export function KanbanBoard({ workspaceId }: { workspaceId: string }) {
     },
   });
 
+  const handleCreateTask = useCallback(
+    (title: string, statusId: string) => {
+      createTaskMutation.mutate(
+        { title, statusId },
+        {
+          onSuccess: () => {
+            // Title is cleared on success via setShowNewTask(null)
+          },
+        }
+      );
+    },
+    [createTaskMutation]
+  );
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveTaskId(String(event.active.id));
   }, []);
@@ -308,7 +322,8 @@ function NewTaskCard({
     e.preventDefault();
     if (title.trim()) {
       onSubmit(title.trim());
-      setTitle("");
+      // Don't clear title here — it will be cleared on success via setShowNewTask(null)
+      // If mutation fails, the title is preserved so the user can retry
     }
   };
 

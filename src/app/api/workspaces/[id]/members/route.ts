@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireOwner } from "@/lib/authz";
 import { z } from "zod";
 import crypto from "crypto";
+import { sendInvitationEmail } from "@/lib/email";
 
 const inviteSchema = z.object({
   email: z.string().email(),
@@ -102,8 +103,18 @@ export async function POST(
     },
   });
 
-  // TODO: Send invitation email via Resend (ADR-007)
-  // For now, return the invitation with the token so it can be shared
+  // Send invitation email via Resend (ADR-007)
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { name: true },
+  });
+
+  await sendInvitationEmail({
+    to: email,
+    workspaceName: workspace?.name ?? "Workspace",
+    inviterName: session.user.name ?? session.user.email ?? "A workspace member",
+    invitationToken: token,
+  });
 
   return NextResponse.json(invitation, { status: 201 });
 }

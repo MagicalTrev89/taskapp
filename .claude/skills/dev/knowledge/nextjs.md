@@ -82,3 +82,49 @@ src/app/
 | `cookies()` returns a Promise | Await `cookies()` from `next/headers` |
 | Client Component importing a Server Component directly | Pass Server Component output as `children` instead |
 | Large bundle on a page that only needs server data | Remove `'use client'` — fetch on the server |
+| `window.location.href` causes full reload after mutation | Use `useRouter().push()` from `next/navigation` for client-side navigation |
+| Sidebar state lost on mobile route change | Use `usePathname()` effect to close mobile sidebar on navigation |
+
+## Server/Client component split pattern
+
+For interactive pages, use the pattern:
+```
+page.tsx (server) → *-client.tsx (client, uses TanStack Query)
+```
+
+The server component verifies auth and membership, then passes IDs to the client component. The client component handles all interactive state, mutations, and data fetching via TanStack Query.
+
+## Optimistic updates with TanStack Query
+
+When implementing drag-and-drop or status changes, use `onMutate` to update the cache immediately, then `onError` to rollback:
+
+```tsx
+const mutation = useMutation({
+  mutationFn: updateItem,
+  onMutate: async (newData) => {
+    await queryClient.cancelQueries({ queryKey: ["items"] });
+    const snapshot = queryClient.getQueryData(["items"]);
+    queryClient.setQueryData(["items"], (old) => /* optimistic update */);
+    return { snapshot };
+  },
+  onError: (_err, _vars, context) => {
+    if (context?.snapshot) queryClient.setQueryData(["items"], context.snapshot);
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["items"] });
+  },
+});
+```
+
+## @dnd-kit mobile support
+
+For drag-and-drop that works on both desktop and mobile, register both `PointerSensor` and `TouchSensor`:
+
+```tsx
+const sensors = useSensors(
+  useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+);
+```
+
+Without `TouchSensor`, drag-and-drop will not work on mobile devices.

@@ -219,7 +219,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/componentschemas/Error"
+                $ref: "#/components/schemas/Error"
 
     delete:
       summary: Delete a status
