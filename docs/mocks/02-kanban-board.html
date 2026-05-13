@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskApp — Kanban Board</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0D9488',
+            'primary-dark': '#0F766E',
+            secondary: '#14B8A6',
+            cta: '#F97316',
+            'cta-hover': '#EA580C',
+            surface: '#F0FDFA',
+            ink: '#134E4A',
+            muted: '#5EEAD4',
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+    }
+    .kanban-col { min-height: calc(100vh - 12rem); }
+    .task-card { cursor: grab; }
+    .task-card:active { cursor: grabbing; }
+    .task-card:hover { transform: translateY(-1px); }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans text-ink min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="fixed top-0 left-0 bottom-0 w-64 bg-white border-r border-gray-200 flex flex-col z-20">
+    <!-- App logo -->
+    <div class="h-16 flex items-center gap-3 px-5 border-b border-gray-100">
+      <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+        </svg>
+      </div>
+      <span class="font-bold text-lg">TaskApp</span>
+    </div>
+
+    <!-- Workspace switcher -->
+    <div class="px-3 pt-4 pb-2">
+      <button class="w-full flex items-center gap-3 px-3 py-2.5 bg-primary/5 border border-primary/20 rounded-xl text-left cursor-pointer hover:bg-primary/10 transition-colors duration-150" aria-label="Switch workspace">
+        <div class="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center text-sm font-semibold">M</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold truncate">Marketing Team</div>
+          <div class="text-xs text-ink/50">5 members</div>
+        </div>
+        <svg class="w-4 h-4 text-ink/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+      </button>
+    </div>
+
+    <!-- Nav items -->
+    <nav class="flex-1 px-3 py-2" aria-label="Main navigation">
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary/10 text-primary font-medium text-sm cursor-pointer">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        Board
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-ink/60 hover:bg-gray-100 text-sm cursor-pointer transition-colors duration-150">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18M3 6h18M3 18h18"/></svg>
+        List
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-ink/60 hover:bg-gray-100 text-sm cursor-pointer transition-colors duration-150">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Settings
+      </a>
+    </nav>
+
+    <!-- User footer -->
+    <div class="border-t border-gray-100 px-3 py-3">
+      <div class="flex items-center gap-3 px-3 py-2">
+        <div class="w-8 h-8 rounded-full bg-cta text-white flex items-center justify-center text-sm font-semibold">JD</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium truncate">Jane Doe</div>
+          <div class="text-xs text-ink/40 truncate">jane@example.com</div>
+        </div>
+        <button class="text-ink/30 hover:text-ink/60 cursor-pointer transition-colors duration-150" aria-label="Sign out">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="ml-64 min-h-screen">
+    <!-- Top bar -->
+    <header class="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 sticky top-0 z-10">
+      <div>
+        <h1 class="text-lg font-bold">Marketing Team</h1>
+      </div>
+      <button class="inline-flex items-center gap-2 bg-cta hover:bg-cta-hover text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-sm shadow-cta/20 transition-all duration-150 cursor-pointer">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        New Task
+      </button>
+    </header>
+
+    <!-- Kanban board -->
+    <div class="p-6 overflow-x-auto">
+      <div class="flex gap-5 min-w-max">
+
+        <!-- Column: To Do -->
+        <div class="w-80 flex-shrink-0">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-blue-400"></div>
+              <h2 class="font-semibold text-sm">To Do</h2>
+              <span class="text-xs font-medium text-ink/40 bg-gray-100 px-2 py-0.5 rounded-full">3</span>
+            </div>
+            <button class="text-ink/30 hover:text-ink/60 cursor-pointer transition-colors duration-150" aria-label="Column options">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+            </button>
+          </div>
+          <div class="space-y-3 kanban-col">
+            <!-- Task card 1 -->
+            <div class="task-card bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer">
+              <h3 class="font-medium text-sm mb-1">Design landing page mockups</h3>
+              <p class="text-xs text-ink/50 mb-3 line-clamp-2">Create high-fidelity mockups for the new product landing page with responsive breakpoints.</p>
+              <div class="flex items-center justify-between">
+                <div class="flex -space-x-1.5">
+                  <div class="w-6 h-6 rounded-full bg-primary text-white text-[10px] font-semibold flex items-center justify-center ring-2 ring-white">JD</div>
+                  <div class="w-6 h-6 rounded-full bg-purple-500 text-white text-[10px] font-semibold flex items-center justify-center ring-2 ring-white">AK</div>
+                </div>
+                <span class="text-xs text-ink/40">2h ago</span>
+              </div>
+            </div>
+            <!-- Task card 2 -->
+            <div class="task-card bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer">
+              <h3 class="font-medium text-sm mb-1">Write blog post draft</h3>
+              <p class="text-xs text-ink/50 mb-3 line-clamp-2">Draft a 1500-word article on Q3 campaign results.</p>
+              <div class="flex items-center justify-between">
+                <div class="flex -space-x-1.5">
+                  <div class="w-6 h-6 rounded-full bg-cta text-white text-[10px] font-semibold flex items-center justify-center ring-2 ring-white">SM</div>
+                </div>
+                <span class="text-xs text-ink/40">1d ago</span>
+              </div>
+            </div>
+            <!-- Task card 3 -->
+            <div class="task-card bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer">
+              <h3 class="font-medium text-sm mb-1">Research competitor features</h3>
+              <p class="text-xs text-ink/50 mb-3 line-clamp-2">Analyze top 5 competitors and document feature gaps.</p>
+              <div class="flex items-center justify-between">
+                <div class="flex -space-x-1.5">
+                  <div class="w-6 h-6 rounded-full bg-blue-500 text-white text-[10px] font-semibold flex items-center justify-center ring-2 ring-white">RL</div>
+                </div>
+                <span class="text-xs text-ink/40">3d ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column: In Progress -->
+        <div class="w-80 flex-shrink-0">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-cta"></div>
+              <h2 class="font-semibold text-sm">In Progress</h2>
+              <span class="text-xs font-medium text-ink/40 bg-gray-100 px-2 py-0.5 rounded-full">2</span>
+            </div>
+            <button class="text-ink/30 hover:text-ink/60 cursor-pointer transition-colors duration-150" aria-label="Column options">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+            </button>
+          </div>
+          <div class="space-y-3 kanban-col">
+            <div class="task-card bg-white border border-cta/20 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer border-l-4 border-l-cta">
+              <h3 class="font-medium text-sm mb-1">Set up email campaign</h3>
+              <p class="text-xs text-ink/50 mb-3 line-clamp-2">Configure Mailchimp audience segments and automation workflow.</p>
+              <div class="flex items-center justify-between">
+                <div class="flex -space-x-1.5">
+                  <div class="w-6 h-6 rounded-full bg-primary text-white text-[10px] font-semibold flex items-center justify-center ring-2 ring-white">JD</div>
+                </div>
+                <span class="text-xs text-ink/40">5h ago</span>
+              </div>
+            </div>
+            <div class="task-card bg-white border border-cta/20 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer border-l-4 border-l-cta">
+              <h3 class="font-medium text-sm mb-1">Update brand guidelines</h3>
+              <p class="text-xs text-ink/50 mb-3 line-clamp-2">Refresh the brand book with new color palette and typography standards.</p>
+              <div class="flex items-center justify-between">
+                <div class="flex -space-x-1.5">
+                  <div class="w-6 h-6 rounded-full bg-purple-500 text-white text-[10px] font-semibold flex items-center justify-center ring-2 ring-white">AK</div>
+                  <div class="w-6 h-6 rounded-full bg-blue-500 text-white text-[10px] font-semibold flex items-center justify-center ring-2 ring-white">RL</div>
+                </div>
+                <span class="text-xs text-ink/40">2d ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column: Completed -->
+        <div class="w-80 flex-shrink-0">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              <h2 class="font-semibold text-sm">Completed</h2>
+              <span class="text-xs font-medium text-ink/40 bg-gray-100 px-2 py-0.5 rounded-full">1</span>
+            </div>
+            <button class="text-ink/30 hover:text-ink/60 cursor-pointer transition-colors duration-150" aria-label="Column options">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+            </button>
+          </div>
+          <div class="space-y-3 kanban-col">
+            <div class="task-card bg-white border border-green-200/60 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer opacity-80">
+              <h3 class="font-medium text-sm mb-1 line-through decoration-green-400">Create social media calendar</h3>
+              <p class="text-xs text-ink/50 mb-3 line-clamp-2">Plan content schedule for the next 30 days across all channels.</p>
+              <div class="flex items-center justify-between">
+                <div class="flex -space-x-1.5">
+                  <div class="w-6 h-6 rounded-full bg-cta text-white text-[10px] font-semibold flex items-center justify-center ring-2 ring-white">SM</div>
+                </div>
+                <span class="text-xs text-ink/40">1w ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+</body>
+</html>

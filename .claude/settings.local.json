@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ' *)",
+      "Bash(npx playwright *)",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e ' *)",
+      "Bash(gh run *)",
+      "Bash(gh pr *)",
+      "Bash(git stash *)",
+      "Bash(git rebase *)",
+      "Bash(git commit *)",
+      "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py \"app dashboard fixture management\" --design-system -p \"TaskApp\" -f markdown)",
+      "Bash(where python *)",
+      "Bash(where python3 *)",
+      "Bash(\"C:\\\\Users\\\\rober\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python312\\\\python.exe\" .claude/skills/ui-ux-pro-max/scripts/search.py \"sports coaching app dashboard fixture management\" --design-system -p \"Coach App\" -f markdown)",
+      "Bash(\"C:\\\\Users\\\\rober\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python312\\\\python.exe\" .claude/skills/ui-ux-pro-max/scripts/search.py \"sports app dashboard detail form edit mobile\" --design-system -p \"Coach App\" -f markdown)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(python3 *)",
+      "Bash(python scripts/search.py \"task management SaaS collaborative kanban productivity\" --design-system -p \"TaskApp\")",
+      "Bash(python scripts/search.py \"kanban dashboard productivity\" --domain style -n 3)",
+      "Bash(python scripts/search.py \"layout responsive dashboard sidebar\" --stack html-tailwind)",
+      "Bash(git init *)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(npx create-next-app@latest tmp-init --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(npm install *)",
+      "Bash(npx prisma *)",
+      "Bash(npx next *)",
+      "Bash(grep -n \"memberships\\\\|members\" src/generated/prisma/models/Workspace.ts)",
+      "Bash(grep -n \"memberships\\\\|members\" src/generated/prisma/models.ts)"
+    ]
+  }
+}
