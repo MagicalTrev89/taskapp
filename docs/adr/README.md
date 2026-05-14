@@ -42,3 +42,4 @@ What becomes easier or more difficult to do because of this change?
 | ADR-008 | Client State Management | Accepted |
 | ADR-009 | Real-Time Update Strategy | Accepted |
 | ADR-010 | Repository Structure | Accepted |
+| ADR-011 | Task Position Ordering Strategy | Accepted |

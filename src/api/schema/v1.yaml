@@ -401,8 +401,13 @@ paths:
                 description:
                   type: string
                   maxLength: 5000
+                  nullable: true
                 statusId:
                   type: string
+                position:
+                  type: integer
+                  nullable: true
+                  description: Sort position within status column
       responses:
         "200":
           description: Updated task
@@ -434,6 +439,42 @@ paths:
                 $ref: "#/components/schemas/Success"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /workspaces/{id}/tasks/reorder:
+    put:
+      summary: Reorder tasks within a status column
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/workspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statusId, taskIds]
+              properties:
+                statusId:
+                  type: string
+                  description: The status column to reorder
+                taskIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Ordered array of task IDs within the status column
+      responses:
+        "200":
+          description: Tasks reordered successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /workspaces/{id}/tasks/{taskId}/comments:
     get:
@@ -781,6 +822,10 @@ components:
         description:
           type: string
           nullable: true
+        position:
+          type: integer
+          nullable: true
+          description: Sort position within status column. Null tasks sort by createdAt desc.
         createdById:
           type: string
         createdAt:

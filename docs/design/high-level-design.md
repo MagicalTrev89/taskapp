@@ -20,6 +20,7 @@ TaskApp is a collaborative task management application with Kanban board and lis
 | Client State Management | TanStack Query (server state) + React hooks (local state) | [ADR-008](../adr/ADR-008-client-state-management.md) |
 | Real-Time Updates | None for MVP (optimistic updates + refetch on navigation) | [ADR-009](../adr/ADR-009-real-time-strategy.md) |
 | Repository Structure | Single Next.js project (monolithic repo) | [ADR-010](../adr/ADR-010-repository-structure.md) |
+| Task Position Ordering | Integer gaps with array reorder API | [ADR-011](../adr/ADR-011-task-position-ordering.md) |
 
 ## Architecture Principles
 
@@ -54,7 +55,7 @@ Status
   └── unique (workspace_id, name) — case-insensitive
 
 Task
-  ├── id, workspace_id, status_id (FK → Status), title, description, created_by (FK → User), created_at
+  ├── id, workspace_id, status_id (FK → Status), title, description, position (nullable int, scoped to status), created_by (FK → User), created_at
   └── Comment (1:N)
 
 Comment
@@ -105,8 +106,9 @@ Tasks
   POST   /api/workspaces/:id/tasks           — Create task
   GET    /api/workspaces/:id/tasks            — List tasks (paginated, filterable by status)
   GET    /api/workspaces/:id/tasks/:tid       — Get task detail
-  PUT    /api/workspaces/:id/tasks/:tid        — Update task
-  DELETE /api/workspaces/:id/tasks/:tid        — Delete task
+  PATCH  /api/workspaces/:id/tasks/:tid       — Update task (partial, including statusId and position)
+  DELETE /api/workspaces/:id/tasks/:tid       — Delete task
+  PUT    /api/workspaces/:id/tasks/reorder    — Reorder tasks within a status column
 
 Comments
   POST   /api/workspaces/:id/tasks/:tid/comments       — Add comment

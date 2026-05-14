@@ -48,18 +48,31 @@ export async function POST(
     finalStatusId = firstStatus.id;
   }
 
-  const task = await prisma.task.create({
-    data: {
-      workspaceId,
-      statusId: finalStatusId,
-      title,
-      description: description ?? null,
-      createdById: session.user.id,
-    },
-    include: {
-      status: true,
-      createdBy: { select: { id: true, name: true, avatarUrl: true } },
-    },
+  const task = await prisma.$transaction(async (tx) => {
+    // Shift existing tasks in the column down by 1, then create at position 0
+    await tx.task.updateMany({
+      where: {
+        workspaceId,
+        statusId: finalStatusId,
+        position: { not: null },
+      },
+      data: { position: { increment: 1 } },
+    });
+
+    return tx.task.create({
+      data: {
+        workspaceId,
+        statusId: finalStatusId,
+        title,
+        description: description ?? null,
+        createdById: session.user.id,
+        position: 0,
+      },
+      include: {
+        status: true,
+        createdBy: { select: { id: true, name: true, avatarUrl: true } },
+      },
+    });
   });
 
   return NextResponse.json(task, { status: 201 });

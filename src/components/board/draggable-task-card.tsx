@@ -14,6 +14,7 @@ interface Task {
   title: string;
   description: string | null;
   statusId: string;
+  position: number | null;
   status: Status;
   createdBy: { id: string; name: string; avatarUrl: string | null };
   createdAt: string;
@@ -27,7 +28,7 @@ export function DraggableTaskCard({
   task: Task;
   workspaceId: string;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({ id: task.id });
 
   const style = {
@@ -38,6 +39,9 @@ export function DraggableTaskCard({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {isOver && !isDragging && (
+        <div className="h-0.5 bg-primary/40 rounded-full mb-2" />
+      )}
       <TaskCard task={task} workspaceId={workspaceId} />
     </div>
   );
