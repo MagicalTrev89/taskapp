@@ -7,11 +7,12 @@ import {
   DragOverlay,
   DragStartEvent,
   DragEndEvent,
+  DragOverEvent,
   PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  rectIntersection,
   useDroppable,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -32,10 +33,20 @@ interface Task {
   title: string;
   description: string | null;
   statusId: string;
+  position: number | null;
   status: Status;
   createdBy: { id: string; name: string; avatarUrl: string | null };
   createdAt: string;
   _count?: { comments: number };
+}
+
+function sortTasksByPosition(a: Task, b: Task): number {
+  if (a.position === null && b.position === null) {
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  }
+  if (a.position === null) return 1;
+  if (b.position === null) return -1;
+  return a.position - b.position;
 }
 
 export function KanbanBoard({ workspaceId }: { workspaceId: string }) {
@@ -43,6 +54,7 @@ export function KanbanBoard({ workspaceId }: { workspaceId: string }) {
   const { toasts, addToast } = useToast();
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [showNewTask, setShowNewTask] = useState<string | null>(null);
+  const [overColumnId, setOverColumnId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -83,24 +95,17 @@ export function KanbanBoard({ workspaceId }: { workspaceId: string }) {
       return res.json();
     },
     onMutate: async ({ taskId, statusId }) => {
-      // Cancel any outgoing refetches so they don't overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: ["tasks", workspaceId] });
-
-      // Snapshot the previous value
       const previousTasks = queryClient.getQueryData<{ tasks: Task[] }>(["tasks", workspaceId]);
-
-      // Optimistically update to the new value
       queryClient.setQueryData<{ tasks: Task[] }>(["tasks", workspaceId], (old) => {
         if (!old) return old;
         return {
           ...old,
           tasks: old.tasks.map((t) =>
-            t.id === taskId ? { ...t, statusId } : t
+            t.id === taskId ? { ...t, statusId, position: 0 } : t
           ),
         };
       });
-
-      // Return context with the snapshot
       return { previousTasks };
     },
     onSuccess: () => {
@@ -108,7 +113,43 @@ export function KanbanBoard({ workspaceId }: { workspaceId: string }) {
     },
     onError: (_err, _variables, context) => {
       addToast("Failed to move task", "error");
-      // Rollback to the snapshot
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks", workspaceId], context.previousTasks);
+      }
+      queryClient.invalidateQueries({ queryKey: ["tasks", workspaceId] });
+    },
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: async ({ statusId, taskIds }: { statusId: string; taskIds: string[] }) => {
+      const res = await fetch(`/api/workspaces/${workspaceId}/tasks/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statusId, taskIds }),
+      });
+      if (!res.ok) throw new Error("Failed to reorder tasks");
+      return res.json();
+    },
+    onMutate: async ({ statusId, taskIds }) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks", workspaceId] });
+      const previousTasks = queryClient.getQueryData<{ tasks: Task[] }>(["tasks", workspaceId]);
+      queryClient.setQueryData<{ tasks: Task[] }>(["tasks", workspaceId], (old) => {
+        if (!old) return old;
+        const updated = old.tasks.map((t) => {
+          if (t.statusId !== statusId) return t;
+          const index = taskIds.indexOf(t.id);
+          if (index === -1) return t;
+          return { ...t, position: index };
+        });
+        return { ...old, tasks: updated };
+      });
+      return { previousTasks };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", workspaceId] });
+    },
+    onError: (_err, _variables, context) => {
+      addToast("Failed to reorder tasks", "error");
       if (context?.previousTasks) {
         queryClient.setQueryData(["tasks", workspaceId], context.previousTasks);
       }
@@ -138,14 +179,7 @@ export function KanbanBoard({ workspaceId }: { workspaceId: string }) {
 
   const handleCreateTask = useCallback(
     (title: string, statusId: string) => {
-      createTaskMutation.mutate(
-        { title, statusId },
-        {
-          onSuccess: () => {
-            // Title is cleared on success via setShowNewTask(null)
-          },
-        }
-      );
+      createTaskMutation.mutate({ title, statusId });
     },
     [createTaskMutation]
   );
@@ -154,18 +188,34 @@ export function KanbanBoard({ workspaceId }: { workspaceId: string }) {
     setActiveTaskId(String(event.active.id));
   }, []);
 
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { over } = event;
+    if (!over) {
+      setOverColumnId(null);
+      return;
+    }
+    const overId = String(over.id);
+    if (statuses.some((s) => s.id === overId)) {
+      setOverColumnId(overId);
+    } else {
+      const targetTask = tasks.find((t) => t.id === overId);
+      if (targetTask) {
+        setOverColumnId(targetTask.statusId);
+      }
+    }
+  }, [statuses, tasks]);
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveTaskId(null);
+      setOverColumnId(null);
       const { active, over } = event;
       if (!over) return;
 
       const taskId = String(active.id);
       const overId = String(over.id);
 
-      // Determine if dropped on a column or a task
       let targetStatusId: string;
-
       if (statuses.some((s) => s.id === overId)) {
         targetStatusId = overId;
       } else {
@@ -178,12 +228,35 @@ export function KanbanBoard({ workspaceId }: { workspaceId: string }) {
       }
 
       const movedTask = tasks.find((t) => t.id === taskId);
-      if (movedTask && movedTask.statusId !== targetStatusId) {
+      if (!movedTask) return;
+
+      if (movedTask.statusId !== targetStatusId) {
         updateTaskMutation.mutate({ taskId, statusId: targetStatusId });
+      } else {
+        const columnTasks = tasks
+          .filter((t) => t.statusId === targetStatusId)
+          .sort(sortTasksByPosition);
+
+        const overTaskIndex = columnTasks.findIndex((t) => t.id === overId);
+        const activeIndex = columnTasks.findIndex((t) => t.id === taskId);
+
+        if (activeIndex === -1 || overTaskIndex === -1 || activeIndex === overTaskIndex) return;
+
+        const newOrder = [...columnTasks];
+        const [moved] = newOrder.splice(activeIndex, 1);
+        newOrder.splice(overTaskIndex, 0, moved);
+
+        const taskIds = newOrder.map((t) => t.id);
+        reorderMutation.mutate({ statusId: targetStatusId, taskIds });
       }
     },
-    [statuses, tasks, updateTaskMutation]
+    [statuses, tasks, updateTaskMutation, reorderMutation]
   );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveTaskId(null);
+    setOverColumnId(null);
+  }, []);
 
   if (loadingStatuses || loadingTasks) {
     return (
@@ -216,79 +289,78 @@ export function KanbanBoard({ workspaceId }: { workspaceId: string }) {
     <div className="flex-1 overflow-x-auto">
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={rectIntersection}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         <div className="flex gap-4 p-6 h-full min-w-max">
           {statuses.map((status) => {
             const columnTasks = tasks
               .filter((t) => t.statusId === status.id)
-              .sort(
-                (a, b) =>
-                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-              );
+              .sort(sortTasksByPosition);
+
+            const isOverColumn = overColumnId === status.id;
 
             return (
-              <DroppableColumn key={status.id} id={status.id}>
-              <div
-                className="flex flex-col w-72 min-w-[288px] bg-gray-50 rounded-2xl"
-              >
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold text-ink">{status.name}</h2>
-                    <span className="text-xs text-ink/40 bg-ink/5 px-2 py-0.5 rounded-full">
-                      {columnTasks.length}
-                    </span>
+              <DroppableColumn key={status.id} id={status.id} isOver={isOverColumn}>
+                <div className="flex flex-col w-72 min-w-[288px] bg-gray-50 rounded-2xl transition-colors duration-150">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-semibold text-ink">{status.name}</h2>
+                      <span className="text-xs text-ink/40 bg-ink/5 px-2 py-0.5 rounded-full">
+                        {columnTasks.length}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setShowNewTask(status.id)}
+                      className="w-6 h-6 flex items-center justify-center text-ink/40 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors duration-150 cursor-pointer"
+                      aria-label={`Add task to ${status.name}`}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setShowNewTask(status.id)}
-                    className="w-6 h-6 flex items-center justify-center text-ink/40 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors duration-150 cursor-pointer"
-                    aria-label={`Add task to ${status.name}`}
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
-                </div>
 
-                <SortableContext
-                  items={columnTasks.map((t) => t.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="flex-1 px-3 pb-3 space-y-2 overflow-y-auto">
-                    {showNewTask === status.id && (
-                      <NewTaskCard
-                        onSubmit={(title) =>
-                          createTaskMutation.mutate({ title, statusId: status.id })
-                        }
-                        onCancel={() => setShowNewTask(null)}
-                        isLoading={createTaskMutation.isPending}
-                      />
-                    )}
-                    {columnTasks.map((task) => (
-                      <DraggableTaskCard key={task.id} task={task} workspaceId={workspaceId} />
-                    ))}
-                    {columnTasks.length === 0 && !showNewTask && (
-                      <div className="text-center py-8 text-ink/30 text-sm">
-                        {totalTasks === 0 ? (
-                          <button
-                            onClick={() => setShowNewTask(status.id)}
-                            className="inline-flex items-center gap-1.5 text-primary hover:text-primary-dark cursor-pointer"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                            </svg>
-                            Create your first task
-                          </button>
-                        ) : (
-                          "No tasks"
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </SortableContext>
-              </div>
+                  <SortableContext
+                    items={columnTasks.map((t) => t.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="flex-1 px-3 pb-3 space-y-2 overflow-y-auto">
+                      {showNewTask === status.id && (
+                        <NewTaskCard
+                          onSubmit={(title) =>
+                            createTaskMutation.mutate({ title, statusId: status.id })
+                          }
+                          onCancel={() => setShowNewTask(null)}
+                          isLoading={createTaskMutation.isPending}
+                        />
+                      )}
+                      {columnTasks.map((task) => (
+                        <DraggableTaskCard key={task.id} task={task} workspaceId={workspaceId} />
+                      ))}
+                      {columnTasks.length === 0 && !showNewTask && (
+                        <div className="text-center py-8 text-ink/30 text-sm">
+                          {totalTasks === 0 ? (
+                            <button
+                              onClick={() => setShowNewTask(status.id)}
+                              className="inline-flex items-center gap-1.5 text-primary hover:text-primary-dark cursor-pointer"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                              </svg>
+                              Create your first task
+                            </button>
+                          ) : (
+                            "No tasks"
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </SortableContext>
+                </div>
               </DroppableColumn>
             );
           })}
@@ -322,8 +394,6 @@ function NewTaskCard({
     e.preventDefault();
     if (title.trim()) {
       onSubmit(title.trim());
-      // Don't clear title here — it will be cleared on success via setShowNewTask(null)
-      // If mutation fails, the title is preserved so the user can retry
     }
   };
 
@@ -358,7 +428,18 @@ function NewTaskCard({
   );
 }
 
-function DroppableColumn({ id, children }: { id: string; children: React.ReactNode }) {
+function DroppableColumn({ id, isOver, children }: { id: string; isOver: boolean; children: React.ReactNode }) {
   const { setNodeRef } = useDroppable({ id });
-  return <div ref={setNodeRef}>{children}</div>;
+  return (
+    <div
+      ref={setNodeRef}
+      className={
+        isOver
+          ? "ring-2 ring-primary/50 rounded-2xl"
+          : undefined
+      }
+    >
+      {children}
+    </div>
+  );
 }

@@ -23,6 +23,8 @@
 |---|-------|-------------|
 | US-005 | Create a Task | Title + description, default status, edit, delete with confirmation |
 | US-006 | Kanban Board View | Columns per status, drag-and-drop, pagination, horizontal scroll on mobile |
+| US-014 | Kanban Drag-and-Drop UX Fixes | Drop-target column highlight, fix unreachable columns, drag-cancel behaviour |
+| US-015 | Reorder Tasks Within a Column | Drag-to-reorder within a status column, position persistence, insertion indicator |
 | US-007 | List View | Sortable table, status filter, pagination, localStorage view preference |
 | US-009 | Task Detail View | Title/description/status display, inline edit, status dropdown, back navigation |
 
@@ -46,7 +48,7 @@ These features are explicitly deferred. They must not be implemented until the M
 - Search/filter tasks by title text
 - Colour-coding statuses
 - Swimlanes or grouping on Kanban board
-- Manual card ordering within a Kanban column
+- ~~Manual card ordering within a Kanban column~~ (moved to MVP scope as US-015)
 - Task history / activity log
 - Workspace deletion or archival
 - Ownership transfer for workspaces
