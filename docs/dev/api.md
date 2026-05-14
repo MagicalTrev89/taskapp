@@ -44,8 +44,9 @@ All endpoints except auth require a valid session cookie. Unauthorized requests 
 | POST | `/api/workspaces/:id/tasks` | Create task |
 | GET | `/api/workspaces/:id/tasks` | List tasks (paginated, sortable, filterable by status) |
 | GET | `/api/workspaces/:id/tasks/:taskId` | Get task detail (includes comments) |
-| PATCH | `/api/workspaces/:id/tasks/:taskId` | Update task (partial) |
+| PATCH | `/api/workspaces/:id/tasks/:taskId` | Update task (partial, including statusId and position) |
 | DELETE | `/api/workspaces/:id/tasks/:taskId` | Delete task (cascade deletes comments) |
+| PUT | `/api/workspaces/:id/tasks/reorder` | Reorder tasks within a status column |
 
 ### Query Parameters (GET /tasks)
 
