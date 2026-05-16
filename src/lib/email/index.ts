@@ -1,7 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface SendInvitationEmailParams {
   to: string;
   workspaceName: string;
@@ -15,6 +13,7 @@ export async function sendInvitationEmail({
   inviterName,
   invitationToken,
 }: SendInvitationEmailParams) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const baseUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
   const acceptUrl = `${baseUrl}/invite/${invitationToken}/accept`;
 

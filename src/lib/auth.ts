@@ -71,9 +71,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return session;
     },
-    async jwt({ token, user }) {
-      if (user?.id) {
-        token.sub = user.id;
+    async jwt({ token, account }) {
+      // On initial sign-in, replace Google's sub with the DB CUID so all
+      // DB queries keyed on userId work correctly.
+      if (account?.providerAccountId) {
+        const dbUser = await prisma.user.findUnique({
+          where: { googleId: account.providerAccountId },
+          select: { id: true },
+        });
+        if (dbUser) token.sub = dbUser.id;
       }
       return token;
     },
