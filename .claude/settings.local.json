@@ -29,7 +29,25 @@
       "Bash(npx prisma *)",
       "Bash(npx next *)",
       "Bash(grep -n \"memberships\\\\|members\" src/generated/prisma/models/Workspace.ts)",
-      "Bash(grep -n \"memberships\\\\|members\" src/generated/prisma/models.ts)"
+      "Bash(grep -n \"memberships\\\\|members\" src/generated/prisma/models.ts)",
+      "Bash(docker run *)",
+      "Bash(docker info *)",
+      "Bash(Select-String \"Server Version|ERROR\")",
+      "Bash(docker rm *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:3000)",
+      "WebSearch",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(git mv *)",
+      "Bash(taskkill *)",
+      "Bash(powershell.exe *)",
+      "Bash(npm ls *)",
+      "Bash(npm uninstall *)",
+      "Bash(curl *)",
+      "Bash(git rm *)",
+      "Bash(npx auth *)",
+      "Bash(tasklist /FI \"IMAGENAME eq node.exe\")",
+      "PowerShell(Get-Process *)"
     ]
   }
 }

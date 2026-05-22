@@ -2,7 +2,7 @@
 
 **Epic:** Tasks
 **Persona:** User (workspace member)
-**Status:** Draft
+**Status:** Done
 
 ## Story
 
@@ -10,16 +10,16 @@ As a workspace member, I want to drag and reorder tasks within the same Kanban c
 
 ## Acceptance Criteria
 
-- [ ] Dragging a task card within the same column reorders the task relative to other tasks in that column; the new position persists after page reload
-- [ ] The task's status is **not** changed when reordering within the same column
-- [ ] Reordering is achieved by dragging a task card above or below another task card in the same column; a visual insertion indicator (e.g., horizontal line) shows where the task will be placed
-- [ ] The new position is persisted via an API call; the UI updates optimistically and reverts on failure
-- [ ] If the reorder API call fails, the task snaps back to its original position and an error message is shown
-- [ ] Reordering works on both desktop (mouse) and mobile (touch)
-- [ ] A `position` (integer) field is added to the Task model, scoped to `statusId` — positions are relative within a status column, not globally unique
-- [ ] The migration must not reorder existing tasks: tasks with a null `position` are ordered by `createdAt` (newest-first), preserving the current default sort
-- [ ] The reorder API accepts a task ID and its desired position within the column, following the same pattern as `PUT /api/workspaces/{id}/statuses` (ordered array of IDs)
-- [ ] Reordering follows last-write-wins (P08): if two users reorder simultaneously, the last update wins with no conflict resolution UI
+- [x] Dragging a task card within the same column reorders the task relative to other tasks in that column; the new position persists after page reload
+- [x] The task's status is **not** changed when reordering within the same column
+- [x] Reordering is achieved by dragging a task card above or below another task card in the same column; a visual insertion indicator (e.g., horizontal line) shows where the task will be placed
+- [x] The new position is persisted via an API call; the UI updates optimistically and reverts on failure
+- [x] If the reorder API call fails, the task snaps back to its original position and an error message is shown
+- [x] Reordering works on both desktop (mouse) and mobile (touch)
+- [x] A `position` (integer) field is added to the Task model, scoped to `statusId` — positions are relative within a status column, not globally unique
+- [x] The migration must not reorder existing tasks: tasks with a null `position` are ordered by `createdAt` (newest-first), preserving the current default sort
+- [x] The reorder API accepts a task ID and its desired position within the column, following the same pattern as `PUT /api/workspaces/{id}/statuses` (ordered array of IDs)
+- [x] Reordering follows last-write-wins (P08): if two users reorder simultaneously, the last update wins with no conflict resolution UI
 
 ## Context
 

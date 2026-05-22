@@ -2,7 +2,7 @@
 
 **Epic:** Tasks
 **Persona:** User (workspace member)
-**Status:** Draft
+**Status:** Done
 
 ## Story
 
@@ -10,13 +10,13 @@ As a workspace member, I want clear visual feedback when dragging a task card ac
 
 ## Acceptance Criteria
 
-- [ ] When a user begins dragging a task card, the target column (the column the card is currently hovering over) is visually highlighted with a distinct background colour or border so the user can clearly see where the card will land
-- [ ] The highlight is removed when the drag ends (on drop or on cancel)
-- [ ] Dragging a task into **any** column — including "In Progress" — successfully moves the task to that column and persists the status change
-- [ ] The drag-and-drop interaction works consistently across all workspace status columns; no column is an unreachable drop target
-- [ ] US-006 AC#5 (task appears at top of target column after drag) still works after this fix
-- [ ] Cancelling a drag (e.g., pressing Escape, dragging off-screen, or releasing outside a valid target) returns the card to its original position with no status change
-- [ ] On mobile/touch devices, the same highlight feedback is shown during drag
+- [x] When a user begins dragging a task card, the target column (the column the card is currently hovering over) is visually highlighted with a distinct background colour or border so the user can clearly see where the card will land
+- [x] The highlight is removed when the drag ends (on drop or on cancel)
+- [x] Dragging a task into **any** column — including "In Progress" — successfully moves the task to that column and persists the status change
+- [x] The drag-and-drop interaction works consistently across all workspace status columns; no column is an unreachable drop target
+- [x] US-006 AC#5 (task appears at top of target column after drag) still works after this fix
+- [x] Cancelling a drag (e.g., pressing Escape, dragging off-screen, or releasing outside a valid target) returns the card to its original position with no status change
+- [x] On mobile/touch devices, the same highlight feedback is shown during drag
 
 ## Context
 

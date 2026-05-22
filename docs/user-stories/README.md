@@ -28,8 +28,8 @@ Stories are organised by epic. Each story file lives in its epic subfolder.
 | US-006 | [Kanban Board View](tasks/US-006-kanban-view.md) | Done |
 | US-007 | [List View](tasks/US-007-list-view.md) | Done |
 | US-009 | [Task Detail View](tasks/US-009-task-detail-view.md) | Done |
-| US-014 | [Kanban Drag-and-Drop UX Fixes](tasks/US-014-kanban-drag-drop-ux.md) | In Progress |
-| US-015 | [Reorder Tasks Within a Column](tasks/US-015-task-reorder.md) | In Progress |
+| US-014 | [Kanban Drag-and-Drop UX Fixes](tasks/US-014-kanban-drag-drop-ux.md) | Done |
+| US-015 | [Reorder Tasks Within a Column](tasks/US-015-task-reorder.md) | Done |
 
 ## Comments
 
