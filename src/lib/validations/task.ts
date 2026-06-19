@@ -14,4 +14,5 @@ export const updateTaskSchema = z.object({
   }).optional(),
   description: z.string().max(5000).nullable().optional(),
   statusId: z.string().optional(),
+  position: z.number().int().nullable().optional(),
 });

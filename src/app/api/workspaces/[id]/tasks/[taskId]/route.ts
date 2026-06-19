@@ -57,9 +57,43 @@ export async function PATCH(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
+  const { statusId, position, ...otherFields } = parsed.data;
+
+  // If statusId changed, move task to top of new column (position = 0)
+  if (statusId && statusId !== existing.statusId) {
+    const task = await prisma.$transaction(async (tx) => {
+      // Shift existing tasks in the target column up by 1
+      await tx.task.updateMany({
+        where: { workspaceId, statusId, position: { not: null } },
+        data: { position: { increment: 1 } },
+      });
+
+      return tx.task.update({
+        where: { id: taskId },
+        data: {
+          ...otherFields,
+          statusId,
+          position: 0,
+        },
+        include: {
+          status: true,
+          createdBy: { select: { id: true, name: true, avatarUrl: true } },
+        },
+      });
+    });
+
+    return NextResponse.json(task);
+  }
+
+  // Status unchanged — update other fields (including position if provided)
+  const updateData: Record<string, unknown> = { ...otherFields };
+  if (position !== undefined) {
+    updateData.position = position;
+  }
+
   const task = await prisma.task.update({
     where: { id: taskId },
-    data: parsed.data,
+    data: updateData,
     include: {
       status: true,
       createdBy: { select: { id: true, name: true, avatarUrl: true } },

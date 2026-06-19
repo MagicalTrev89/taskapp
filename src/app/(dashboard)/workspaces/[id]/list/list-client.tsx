@@ -17,6 +17,7 @@ interface Task {
   title: string;
   description: string | null;
   statusId: string;
+  position: number | null;
   status: Status;
   createdBy: { id: string; name: string; avatarUrl: string | null };
   createdAt: string;
